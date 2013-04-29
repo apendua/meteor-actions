@@ -31,58 +31,54 @@ var getAction = function (id) {
 
 Actions = {};
 
-define('actions', [], function () {
+_.extend(Actions, {
 
-  _.extend(Actions, {
+  register: function (selector, callback) {
+    if (!_.isFunction(callback))
+      throw new Error('callback must be a function, not ' + typeof(callback));
 
-    register: function (selector, callback) {
-      if (!_.isFunction(callback))
-        throw new Error('callback must be a function, not ' + typeof(callback));
+    if (typeof selector === 'string')
+      selector = {action:selector};
 
-      if (typeof selector === 'string')
-        selector = {action:selector};
+    //TODO: check if the selector is unique
+    var id = Meteor.actions.insert(selector);
+    getAction(id).callback = callback;
+  },
 
-      //TODO: check if the selector is unique
-      var id = Meteor.actions.insert(selector);
-      getAction(id).callback = callback;
-    },
+  //TODO: implement allow deny with common code
+  allow: function (selector, validator) {
+    if (!_.isFunction(validator))
+      return;
 
-    //TODO: implement allow deny with common code
-    allow: function (selector, validator) {
-      if (!_.isFunction(validator))
-        return;
+    if (typeof selector === 'string')
+      selector = {action:selector};
 
-      if (typeof selector === 'string')
-        selector = {action:selector};
+    Meteor.actions.find(selector).observeChanges({
+      'added': function (id) {
+        getAction(id).allow.push(validator);
+      },
+      'removed': function (id) {
+        // remove validator from list
+      },
+    });
+  },
 
-      Meteor.actions.find(selector).observeChanges({
-        'added': function (id) {
-          getAction(id).allow.push(validator);
-        },
-        'removed': function (id) {
-          // remove validator from list
-        },
-      });
-    },
+  deny: function (selector, validator) {
+    if (!_.isFunction(validator))
+      return;
 
-    deny: function (selector, validator) {
-      if (!_.isFunction(validator))
-        return;
+    if (typeof selector === 'string')
+      selector = {action:selector};
 
-      if (typeof selector === 'string')
-        selector = {action:selector};
-
-      Meteor.actions.find(selector).observeChanges({
-        'added': function (id) {
-          getAction(id).deny.push(validator);
-        },
-        'removed': function (id) {
-          // remove validator from list
-        },
-      });
-    },
-  });
-
-  return Actions;
+    Meteor.actions.find(selector).observeChanges({
+      'added': function (id) {
+        getAction(id).deny.push(validator);
+      },
+      'removed': function (id) {
+        // remove validator from list
+      },
+    });
+  },
 });
+
 
