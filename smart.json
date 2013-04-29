@@ -1,0 +1,9 @@
+{
+    "name": "actions",
+    "description": "A toolset for action buttons creation",
+    "homepage": "https://github.com/apendua/meteor-actions",
+    "author": "Tomasz Lenarcik",
+    "version": "0.3.8",
+    "git": "https://github.com/apendua/meteor-actions.git",
+    "packages": {}
+}
