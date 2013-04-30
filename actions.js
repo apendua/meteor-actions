@@ -7,12 +7,14 @@ Meteor.actions = new Meteor.Collection(null, {
       selector : data,
       callback : action.callback,
       validate : function validate (context) {
-        //TODO: also use deny rules
         //TODO: use generic arguments
-        var pass = _.some(action.allow, function (validator) {
+        var allow = _.some(action.allow, function (validator) {
           return validator.call(action, Meteor.userId(), context);
         });
-        return pass; 
+        var deny = _.some(action.deny, function (validator) {
+          return validator.call(action, Meteor.userId(), context);
+        });
+        return allow && !deny; 
       },
     };// return
   },// transform
