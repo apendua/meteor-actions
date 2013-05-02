@@ -32,7 +32,7 @@ if (typeof Handlebars !== 'undefined') {
               } else {
                 _.each(nodes, function (node) {
                   var action = Meteor.actions.findOne(getActionSelector(node, options.hash));
-                  if (action && action.validate(Spark.getDataContext(node))) {
+                  if (action && action.validate(Spark.getDataContext(node), context)) {
                     $(node).removeClass('disabled').prop('disabled', false)
                       .filter('a').parent().filter('li').removeClass('disabled');
                   } else {
@@ -59,9 +59,9 @@ if (typeof Handlebars !== 'undefined') {
             var action = Meteor.actions.findOne(getActionSelector(
               $(event.target).closest('[data-action]'), options.hash
             ));
-            if (action && action.validate(this)) {
-              //XXX: using action instead of template
-              action.callback.call(this, event, action);
+            if (action && action.validate(this, context)) {
+              //XXX: the last argument only pretends to be a template ;)
+              action.callback.call(this, event, {data : context});
               event.preventDefault();
             }
           },
