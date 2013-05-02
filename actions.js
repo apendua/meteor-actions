@@ -6,13 +6,14 @@ Meteor.actions = new Meteor.Collection(null, {
     return {
       selector : data,
       callback : action.callback,
-      validate : function validate (context) {
-        //TODO: use generic arguments
+      validate : function validate () {
+        var args = _.toArray(arguments); args.unshift(Meteor.userId());
+        //-------------------------------------------------------------
         var allow = _.some(action.allow, function (validator) {
-          return validator.call(action, Meteor.userId(), context);
+          return validator.apply(action, args);
         });
         var deny = _.some(action.deny, function (validator) {
-          return validator.call(action, Meteor.userId(), context);
+          return validator.apply(action, args);
         });
         return allow && !deny; 
       },
