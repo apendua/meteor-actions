@@ -1,6 +1,7 @@
 
 if (typeof Handlebars !== 'undefined') {
 
+  // we will use this one later
   var blacklist = ['showDenied', ];
 
   var getActionSelector = function (node, options) {
@@ -16,25 +17,32 @@ if (typeof Handlebars !== 'undefined') {
 
   Handlebars.registerHelper('actions', function (context, options) {
     if (options === undefined) { options = context; context = this; }
-    var handle;
-    //Q: do we really want UNIQUE_LABEL (?)
-    var html = Spark.labelBranch(Spark.UNIQUE_LABEL, function () {
+    var handle = null;
+    var label = 'actions=' + EJSON.stringify(options.hash);
+    var html = Spark.labelBranch(label, function () {
       var html = Spark.createLandmark({
         rendered: function () {
-          //TODO: how we should disable links?
-          var nodes = this.findAll('[data-action]');
-          handle = Deps.autorun(function () {
-            _.each(nodes, function (node) {
-              var action = Meteor.actions.findOne(getActionSelector(node, options.hash));
-              if (action && action.validate(Spark.getDataContext(node))) {
-                $(node).removeClass('disabled').prop('disabled', false)
-                  .filter('a').parent().filter('li').removeClass('disabled');
+          var self = this, nodes = null;
+          nodes = self.findAll('[data-action]');
+          if (nodes) {
+            if (handle) handle.stop();
+            handle = Deps.autorun(function () {
+              if (!self.hasDom()) { //TODO: is this even possible (?)
+                handle.stop();
               } else {
-                $(node).addClass('disabled').prop('disabled', true)
-                  .filter('a').parent().filter('li').addClass('disabled');
-              }
-            });// each
-          });// autorun
+                _.each(nodes, function (node) {
+                  var action = Meteor.actions.findOne(getActionSelector(node, options.hash));
+                  if (action && action.validate(Spark.getDataContext(node))) {
+                    $(node).removeClass('disabled').prop('disabled', false)
+                      .filter('a').parent().filter('li').removeClass('disabled');
+                  } else {
+                    $(node).addClass('disabled').prop('disabled', true)
+                      .filter('a').parent().filter('li').addClass('disabled');
+                  }
+                });//each
+              }//hasDom
+            });//autorun
+          }//!!nodes
         },
         destroyed: function () {
           if (handle)
@@ -52,7 +60,8 @@ if (typeof Handlebars !== 'undefined') {
               $(event.target).closest('[data-action]'), options.hash
             ));
             if (action && action.validate(this)) {
-              action.callback.call(this, event, action); //XXX: using action instead of template
+              //XXX: using action instead of template
+              action.callback.call(this, event, action);
               event.preventDefault();
             }
           },

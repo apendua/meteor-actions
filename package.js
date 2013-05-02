@@ -5,7 +5,7 @@ Package.describe({
 
 Package.on_use(function (api) {
     //TODO: remove underscore dependency?
-    api.use(['spark', 'underscore'], 'client');
+    api.use(['spark', 'underscore', 'ejson'], 'client');
 
     // JS code
     api.add_files('actions.js', 'client');
