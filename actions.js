@@ -2,7 +2,7 @@ var actions = {};
 
 var transform = function (data) {
   var action = getAction(data._id);
-  return {
+  return _.extend(data, {
     perform : function () {
       var self = this, args = _.toArray(arguments), result = undefined;
       // parse options
@@ -54,8 +54,7 @@ var transform = function (data) {
       });
       return allow && !deny; 
     },
-    selector : data,
-  };//return
+  });//return
 };//transform
 
 Meteor.actions = new Meteor.Collection(null, {transform: transform});
