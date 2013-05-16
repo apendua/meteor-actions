@@ -4,18 +4,35 @@ var transform = function (data) {
   var action = getAction(data._id);
   return {
     perform : function () {
-      var self = this, result;
+      var self = this, args = _.toArray(arguments), result = undefined;
+      // parse options
+      var opts = args.pop();
+      if (_.isFunction(opts)) {
+        opts = { onSuccess: opts };
+      } else if (
+        !_.isObject(opts) || (
+          !_.isFunction(opts.onError) && !_.isFunction(opts.onSuccess)
+        ) 
+      ) { args.push(opts); opts = {}; }
+      // perform action in safe environment
       try {
         if (!self.validate.apply(self, arguments))
           throw new Meteor.Error(403, 'Action not allowed');
         var result = self.callback.apply(self, arguments);
+        // trigger onSuccess callbacks
+        if (_.isFunction(opts.onSuccess)) 
+          opts.onSuccess.call(self, result);
         _.each(action.onSuccess, function (callback) {
           callback.call(self, result);
         });
       } catch (err) {
-        if (_.isEmpty(action.onError))
+        if (!_.isFunction(opts.onError) && _.isEmpty(action.onError))
+          // no handlers, so throw the error again
           throw err;
         else {
+          // trigger onError callbacks
+          if (_.isFunction(opts.onError)) 
+            opts.onError.call(self, result);
           _.each(action.onError, function (callback) {
             callback.call(self, err);
           });
@@ -30,10 +47,10 @@ var transform = function (data) {
       var args = _.toArray(arguments); args.unshift(Meteor.userId());
       //-------------------------------------------------------------
       var allow = _.some(action.allow, function (validator) {
-        return validator.apply(action, args);
+        return validator.apply(this, args);
       });
       var deny = _.some(action.deny, function (validator) {
-        return validator.apply(action, args);
+        return validator.apply(this, args);
       });
       return allow && !deny; 
     },
