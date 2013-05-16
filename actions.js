@@ -93,8 +93,6 @@ var bind = function (type, selector, callback) {
   });
 };
 
-// TEMPLATE ACTIONS
-
 Actions = {};
 
 _.each([ 'allow', 'deny', 'onSuccess', 'onError', ], function (type) {
@@ -113,10 +111,21 @@ _.extend(Actions, {
     if (typeof selector === 'string')
       props = {action:props};
 
-    //TODO: check if the props is unique
+    //TODO: check if the props is unique (really?)
     _.extend(props, {_id: Meteor.actions.insert(props)});
-    getAction(props._id).callback = callback;
-    return transform(props);
+    
+    var action = getAction(props._id);
+    var handle = transform(props);
+
+    action.callback = callback;
+
+    _.each([ 'allow', 'deny', 'onSuccess', 'onError', ], function (type) {
+      handle[type] = function (callback) {
+        action[type][uniqueKey()] = callback;
+      };
+    });
+    
+    return handle;
   },
 
 });
