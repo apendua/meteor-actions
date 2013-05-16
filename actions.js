@@ -6,7 +6,7 @@ Meteor.actions = new Meteor.Collection(null, {
     return {
       selector : data,
       callback : action.callback,
-      validate : function validate () {
+      validate : function () {
         var args = _.toArray(arguments); args.unshift(Meteor.userId());
         //-------------------------------------------------------------
         var allow = _.some(action.allow, function (validator) {
@@ -24,64 +24,59 @@ Meteor.actions = new Meteor.Collection(null, {
 var getAction = function (id) {
   var action = actions[id] || (
     actions[id] = {
-      allow : [],
-      deny  : [],
+      onSuccess : {},
+      onError   : {},
+      allow     : {},
+      deny      : {},
     });
   return action;
+};
+
+var counter = 0;
+var uniqueKey = function () {
+  return ++counter;
+};
+
+var bind = function (type, selector, callback) {
+ if (!_.isFunction(callback))
+    throw new Error('callback must be a function, not ' + typeof(callback));
+  //------------------------------------------------------------------------
+  if (typeof selector === 'string')
+    selector = {action:selector};
+  var key = uniqueKey();
+  return Meteor.actions.find(selector).observeChanges({
+    'added': function (id) {
+      getAction(id)[type][key] = callback;
+    },
+    'removed': function (id) {
+      delete getAction(id)[type][key];
+    },
+  });
 };
 
 // TEMPLATE ACTIONS
 
 Actions = {};
 
+_.each([ 'allow', 'deny', 'onSuccess', 'onError', ], function (type) {
+  Actions[type] = function () {
+    var args = _.toArray(arguments); args.unshift(type);
+    return bind.apply(undefined, args);
+  };
+});
+
 _.extend(Actions, {
 
-  register: function (selector, callback) {
+  register: function (props, callback) {
     if (!_.isFunction(callback))
       throw new Error('callback must be a function, not ' + typeof(callback));
 
     if (typeof selector === 'string')
-      selector = {action:selector};
+      props = {action:props};
 
-    //TODO: check if the selector is unique
-    var id = Meteor.actions.insert(selector);
+    //TODO: check if the props is unique
+    var id = Meteor.actions.insert(props);
     getAction(id).callback = callback;
   },
 
-  //TODO: implement allow deny with common code
-  allow: function (selector, validator) {
-    if (!_.isFunction(validator))
-      return;
-
-    if (typeof selector === 'string')
-      selector = {action:selector};
-
-    Meteor.actions.find(selector).observeChanges({
-      'added': function (id) {
-        getAction(id).allow.push(validator);
-      },
-      'removed': function (id) {
-        // remove validator from list
-      },
-    });
-  },
-
-  deny: function (selector, validator) {
-    if (!_.isFunction(validator))
-      return;
-
-    if (typeof selector === 'string')
-      selector = {action:selector};
-
-    Meteor.actions.find(selector).observeChanges({
-      'added': function (id) {
-        getAction(id).deny.push(validator);
-      },
-      'removed': function (id) {
-        // remove validator from list
-      },
-    });
-  },
 });
-
-
