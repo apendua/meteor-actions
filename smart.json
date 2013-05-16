@@ -1,6 +1,6 @@
 {
     "name": "actions",
-    "description": "A toolset for action buttons creation",
+    "description": "Basic action management API",
     "homepage": "https://github.com/apendua/meteor-actions",
     "author": "Tomasz Lenarcik",
     "version": "0.3.8",

@@ -1,13 +1,12 @@
 
 Package.describe({
-    summary: "A toolset for action buttons creation",
+    summary: "Basic action management system",
 });
 
 Package.on_use(function (api) {
-    //TODO: remove underscore dependency?
-    api.use(['spark', 'underscore', 'ejson'], 'client');
+    api.use('spark', 'client');
+    api.use(['underscore', 'ejson'], ['client', 'server']);
 
-    // JS code
-    api.add_files('actions.js', 'client');
+    api.add_files('actions.js', ['client', 'server']);
     api.add_files('helpers.js', 'client');
 });
