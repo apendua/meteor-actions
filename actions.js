@@ -60,14 +60,19 @@ var transform = function (data) {
 
 Meteor.actions = new Meteor.Collection(null, {transform: transform});
 
+var methods = [ 'allow', 'deny', 'onSuccess', 'onError', ];
+
+var Action = function () {
+  var self = this;
+  _.each(methods, function (name) {
+    self[name] = {};
+  });
+};
+
 var getAction = function (id) {
   var action = actions[id] || (
-    actions[id] = {
-      onSuccess : {},
-      onError   : {},
-      allow     : {},
-      deny      : {},
-    });
+      actions[id] = new Action
+    );
   return action;
 };
 
@@ -76,7 +81,7 @@ var uniqueKey = function () {
   return ++counter;
 };
 
-var bind = function (type, selector, callback) {
+var bind = function (name, selector, callback) {
  if (!_.isFunction(callback))
     throw new Error('callback must be a function, not ' + typeof(callback));
   //------------------------------------------------------------------------
@@ -85,19 +90,19 @@ var bind = function (type, selector, callback) {
   var key = uniqueKey();
   return Meteor.actions.find(selector).observeChanges({
     'added': function (id) {
-      getAction(id)[type][key] = callback;
+      getAction(id)[name][key] = callback;
     },
     'removed': function (id) {
-      delete getAction(id)[type][key];
+      delete getAction(id)[name][key];
     },
   });
 };
 
 Actions = {};
 
-_.each([ 'allow', 'deny', 'onSuccess', 'onError', ], function (type) {
-  Actions[type] = function () {
-    var args = _.toArray(arguments); args.unshift(type);
+_.each(methods, function (name) {
+  Actions[name] = function () {
+    var args = _.toArray(arguments); args.unshift(name);
     return bind.apply(undefined, args);
   };
 });
@@ -119,12 +124,12 @@ _.extend(Actions, {
 
     action.callback = callback;
 
-    _.each([ 'allow', 'deny', 'onSuccess', 'onError', ], function (type) {
-      handle[type] = function (callback) {
-        action[type][uniqueKey()] = callback;
+    _.each(methods, function (name) {
+      handle[name] = function (callback) {
+        action[name][uniqueKey()] = callback;
       };
     });
-    
+
     return handle;
   },
 
