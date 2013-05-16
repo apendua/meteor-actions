@@ -129,11 +129,23 @@ _.extend(Actions, {
         action[name][uniqueKey()] = callback;
       };
     });
-
+    /*
+    handle.events = function (eventMap) {
+      var events = Actions._events[props._id] ||
+                  (Actions._events[props._id] = {});
+      //--------------------------------------------
+      _.each(eventMap, function (callback, spec) {
+        events[spec] = (events[spec] || []);
+        events[props._id][spec].push(function (event) {
+          return callback.call(this, event, handle);
+        });
+      });
+    };
+    */
     return handle;
   },
 
- find: function () {
+  find: function () {
     return Meteor.actions.find.apply(Meteor.actions, arguments);
   },
 

@@ -73,5 +73,54 @@ if (typeof Handlebars !== 'undefined') {
     }); // labelBranch
     return html;
   });
+  /*
+  Handlebars.registerHelper('action', function (context, options) {
+    if (options === undefined) { options = context; context = this; }
+    //---------------------------------------------------------------
+    var action = Meteor.actions.findOne(options.hash);
+    if (!action) // only render the content
+      return options.fn(context);
 
+    var handle = null;
+    var label = 'action=' + EJSON.stringify(options.hash);
+    return Spark.labelBranch(label, function () {
+      var html = Spark.createLandmark({
+        rendered: function () {
+          var self = this, nodes = null;
+          nodes = self.findAll('button');
+          if (nodes) {
+            handle && handle.stop();
+            handle = Deps.autorun(function () {
+              if (!self.hasDom()) { //TODO: is this even possible (?)
+                handle.stop();
+              } else {
+                _.each(nodes, function (node) {
+                  //TODO: implement hide
+                  if (action && !action.disable(Spark.getDataContext(node))) {
+                    $(node).removeClass('disabled').prop('disabled', false)
+                      .filter('a').parent().filter('li').removeClass('disabled');
+                  } else {
+                    $(node).addClass('disabled').prop('disabled', true)
+                      .filter('a').parent().filter('li').addClass('disabled');
+                  }
+                });// each
+              }// hasDom
+            });// autorun
+          }// !!nodes
+        },
+        destroyed: function () {
+          handle && handle.stop();
+        },
+      }, function () { // landmark
+        var html = Spark.isolate(function () {
+          if (options && _.isFunction(options.fn))
+            return options.fn(context);
+          return '';
+        }); // isolate
+        return html;//Spark.attachEvents(Actions._events, html);
+      }); // createLandmark
+      return Spark.setDataContext(context, html);
+    }); // labelBranch
+  });
+  */
 }
