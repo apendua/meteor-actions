@@ -133,4 +133,28 @@ _.extend(Actions, {
     return handle;
   },
 
+ find: function () {
+    return Meteor.actions.find.apply(Meteor.actions, arguments);
+  },
+
+  findOne: function () {
+    return Meteor.actions.findOne.apply(Meteor.actions, arguments);
+  },
+
+  filter: function (selector) {
+    var proxy = {}, self = this;
+    selector = EJSON.clone(selector); // for safety :P
+    _.each(self, function (value, key) {
+      if (_.isFunction(value)) {
+        proxy[key] = function () {
+          var args = _.toArray(arguments);
+          // do not break the original selector
+          args[0] = _.defaults(_.clone(selector), args[0]);
+          return value.apply(self, args); // XXX is self ok?
+        };//proxy
+      }//if
+    });//each
+    return proxy;
+  },
+
 });
