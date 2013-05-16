@@ -1,6 +1,6 @@
 
 Package.describe({
-    summary: "Basic action management system",
+    summary: "Basic action management API",
 });
 
 Package.on_use(function (api) {
