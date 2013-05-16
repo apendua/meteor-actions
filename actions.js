@@ -1,25 +1,47 @@
 var actions = {};
 
-Meteor.actions = new Meteor.Collection(null, {
-  transform: function (data) {
-    var action = getAction(data._id);
-    return {
-      selector : data,
-      callback : action.callback,
-      validate : function () {
-        var args = _.toArray(arguments); args.unshift(Meteor.userId());
-        //-------------------------------------------------------------
-        var allow = _.some(action.allow, function (validator) {
-          return validator.apply(action, args);
+var transform = function (data) {
+  var action = getAction(data._id);
+  return {
+    perform : function () {
+      var self = this, result;
+      try {
+        if (!self.validate.apply(self, arguments))
+          throw new Meteor.Error(403, 'Action not allowed');
+        var result = self.callback.apply(self, arguments);
+        _.each(action.onSuccess, function (callback) {
+          callback.call(self, result);
         });
-        var deny = _.some(action.deny, function (validator) {
-          return validator.apply(action, args);
-        });
-        return allow && !deny; 
-      },
-    };// return
-  },// transform
-});// Collection
+      } catch (err) {
+        if (_.isEmpty(action.onError))
+          throw err;
+        else {
+          _.each(action.onError, function (callback) {
+            callback.call(self, err);
+          });
+        } //if (_.isEmpty(...))
+      } //catch
+      return result;
+    },
+    callback : function () {
+      return action.callback.call(this, arguments);
+    },
+    validate : function () {
+      var args = _.toArray(arguments); args.unshift(Meteor.userId());
+      //-------------------------------------------------------------
+      var allow = _.some(action.allow, function (validator) {
+        return validator.apply(action, args);
+      });
+      var deny = _.some(action.deny, function (validator) {
+        return validator.apply(action, args);
+      });
+      return allow && !deny; 
+    },
+    selector : data,
+  };//return
+};//transform
+
+Meteor.actions = new Meteor.Collection(null, {transform: transform});
 
 var getAction = function (id) {
   var action = actions[id] || (
@@ -75,8 +97,9 @@ _.extend(Actions, {
       props = {action:props};
 
     //TODO: check if the props is unique
-    var id = Meteor.actions.insert(props);
-    getAction(id).callback = callback;
+    _.extend(props, {_id: Meteor.actions.insert(props)});
+    getAction(props._id).callback = callback;
+    return transform(props);
   },
 
 });
