@@ -5,6 +5,7 @@ var transform = function (data) {
   return _.extend(data, {
     perform : function () {
       var self = this, args = _.toArray(arguments), result = undefined;
+      args.unshift(Meteor.userId());
       // parse options
       var opts = args.pop();
       if (_.isFunction(opts)) {
@@ -16,9 +17,10 @@ var transform = function (data) {
       ) { args.push(opts); opts = {}; }
       // perform action in safe environment
       try {
-        if (!self.validate.apply(self, arguments))
+        //TODO: cleaner implementation
+        if (!self.validate.apply(self, args))
           throw new Meteor.Error(403, 'Action not allowed');
-        var result = self.callback.apply(self, arguments);
+        var result = self.callback.apply(self, args);
         // trigger onSuccess callbacks
         if (_.isFunction(opts.onSuccess)) 
           opts.onSuccess.call(self, result);
@@ -44,8 +46,8 @@ var transform = function (data) {
       return action.callback.call(this, arguments);
     },
     validate : function () {
-      var args = _.toArray(arguments); args.unshift(Meteor.userId());
-      //-------------------------------------------------------------
+      var args = arguments;
+
       var allow = _.some(action.allow, function (validator) {
         return validator.apply(this, args);
       });
@@ -80,6 +82,12 @@ var uniqueKey = function () {
   return ++counter;
 };
 
+var toSelector = function (selector) {
+  if (_.isString(selector))
+    return { action: selector };
+  return selector;
+};
+
 var bind = function (name, selector, callback) {
  if (!_.isFunction(callback))
     throw new Error('callback must be a function, not ' + typeof(callback));
@@ -112,17 +120,13 @@ _.extend(Actions, {
     if (!_.isFunction(callback))
       throw new Error('callback must be a function, not ' + typeof(callback));
 
-    if (typeof selector === 'string')
-      props = {action:props};
-
     //TODO: check if the props is unique (really?)
-    _.extend(props, {_id: Meteor.actions.insert(props)});
+    var id = Meteor.actions.insert(toSelector(props));
     
-    var action = getAction(props._id);
-    var handle = transform(props);
-
+    var action = getAction(id);
     action.callback = callback;
 
+    var handle = transform({_id:id});
     _.each(methods, function (name) {
       handle[name] = function (callback) {
         action[name][uniqueKey()] = callback;
@@ -153,19 +157,37 @@ _.extend(Actions, {
   },
 
   filter: function (selector) {
-    var proxy = {}, self = this;
+    var proxy = {}, self = this, omit = ['may', 'perform', ];
     selector = EJSON.clone(selector); // for safety :P
     _.each(self, function (value, key) {
-      if (_.isFunction(value)) {
+      if (omit.indexOf(key) < 0 && _.isFunction(value)) {
         proxy[key] = function () {
           var args = _.toArray(arguments);
           // do not break the original selector
           args[0] = _.defaults(_.clone(selector), args[0]);
           return value.apply(self, args); // XXX is self ok?
         };//proxy
-      }//if
+      } else
+        proxy[key] = value;
     });//each
     return proxy;
+  },
+
+  may: function () {
+    var args = _.toArray(arguments), action = null;
+    var userId = args.shift();
+    selector = args[0]; args[0] = userId;
+    action = this.findOne(toSelector(selector), {reactive:false});
+    return !!action && action.validate.apply(action, args);
+  },
+
+  perform: function () {
+    var args = _.toArray(arguments);
+    var selector = args.shift();
+    this.find(toSelector(selector), {reactive:false})
+      .forEach(function (action) {
+        action.perform.apply(action, args);
+      });
   },
 
 });
