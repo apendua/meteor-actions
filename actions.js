@@ -1,45 +1,42 @@
 var actions = {};
 
+var parseOptions = function (args) {
+  var callbacks = _.last(args);
+  if (_.isFunction(callbacks))
+    return { onSuccess: callbacks };
+  if (!_.isObject(callbacks))
+    return {};
+  var options = {};
+  if (_.isFunction(callbacks.onSuccess))
+    options.onSuccess = callbacks.onSuccess;
+  if (_.isFunction(callbacks.onError))
+    options.onError = callbacks.onError;
+  return options;
+};
+
 var transform = function (data) {
   var action = getAction(data._id);
   return _.extend(data, {
     perform : function () {
-      var self = this, args = _.toArray(arguments), result = undefined;
+      var self = this, args = _.toArray(arguments), result;
+      var options = parseOptions(args);
+      // prepare arguments for validators
+      !_.isEmpty(options) && args.pop();
       args.unshift(Meteor.userId());
-      // parse options
-      var opts = args.pop();
-      if (_.isFunction(opts)) {
-        opts = { onSuccess: opts };
-      } else if (
-        !_.isObject(opts) || (
-          !_.isFunction(opts.onError) && !_.isFunction(opts.onSuccess)
-        ) 
-      ) { args.push(opts); opts = {}; }
-      // perform action in safe environment
       try {
-        //TODO: cleaner implementation
         if (!self.validate.apply(self, args))
           throw new Meteor.Error(403, 'Action not allowed');
-        var result = self.callback.apply(self, args);
-        // trigger onSuccess callbacks
-        if (_.isFunction(opts.onSuccess)) 
-          opts.onSuccess.call(self, result);
-        _.each(action.onSuccess, function (callback) {
-          callback.call(self, result);
-        });
+        result = self.callback.apply(self, args);
+        options.onSuccess && options.onSuccess.call(self, result);
+        _.each(action.onSuccess, function (callback) {callback.call(self, result)});
       } catch (err) {
-        if (!_.isFunction(opts.onError) && _.isEmpty(action.onError))
-          // no handlers, so throw the error again
-          throw err;
+        if (!options.onError && _.isEmpty(action.onError))
+          throw err; // no handlers present, so throw the error again
         else {
-          // trigger onError callbacks
-          if (_.isFunction(opts.onError)) 
-            opts.onError.call(self, result);
-          _.each(action.onError, function (callback) {
-            callback.call(self, err);
-          });
-        } //if (_.isEmpty(...))
-      } //catch
+          options.onError && options.onError.call(self, err);
+          _.each(action.onError, function (callback) {callback.call(self, err)});
+        }
+      }
       return result;
     },
     callback : function () {
@@ -47,7 +44,6 @@ var transform = function (data) {
     },
     validate : function () {
       var args = arguments;
-
       var allow = _.some(action.allow, function (validator) {
         return validator.apply(this, args);
       });
@@ -77,9 +73,10 @@ var getAction = function (id) {
   return action;
 };
 
-var counter = 0;
 var uniqueKey = function () {
-  return ++counter;
+  if (!uniqueKey.counter)
+    uniqueKey.counter = 0;
+  return ++uniqueKey.counter;
 };
 
 var toSelector = function (selector) {
@@ -120,7 +117,7 @@ _.extend(Actions, {
     if (!_.isFunction(callback))
       throw new Error('callback must be a function, not ' + typeof(callback));
 
-    //TODO: check if the props is unique (really?)
+    //TODO: print warning if props is not unique
     var id = Meteor.actions.insert(toSelector(props));
     
     var action = getAction(id);
