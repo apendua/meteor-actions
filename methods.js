@@ -50,17 +50,16 @@ _.extend(Actions, {
     action.callback = callback;
 
     var handle = Actions._transform({_id:id});
-    _.each(methods, function (name) {
-      handle[name] = function (callback) {
-        action[name][uniqueKey()] = callback;
+    _.each(methods, function (what) {
+      handle[what] = function (callback) {
+        action.add(what, uniqueKey(), callback);
       };
     });
 
-    /*if (Meteor.isClient) {
+    if (Meteor.isClient) {
+
       handle.events = function (eventMap) {
-        var events = Actions._events[id] ||
-                    (Actions._events[id] = {});
-        //--------------------------------------------
+        var events = action.events || (action.events = {});
         _.each(eventMap, function (callback, spec) {
           events[spec] = (events[spec] || []);
           events[spec].push(function (event) {
@@ -68,7 +67,14 @@ _.extend(Actions, {
           });
         });
       };
-    }*/
+
+      handle.helpers = function (helpers) {
+        var helpers = action.helpers || (action.helpers = {});
+        _.each(helpers, function (callback, name) {
+          helpers[name] = callback;
+        });
+      };
+    }
 
     return handle;
   },
