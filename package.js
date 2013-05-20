@@ -4,9 +4,12 @@ Package.describe({
 });
 
 Package.on_use(function (api) {
-    api.use('spark', 'client');
+    api.use(['spark'], 'client');
     api.use(['underscore', 'ejson'], ['client', 'server']);
 
     api.add_files('actions.js', ['client', 'server']);
+    api.add_files('methods.js', ['client', 'server']);
+
+    api.add_files('events.js', 'client');
     api.add_files('helpers.js', 'client');
 });
