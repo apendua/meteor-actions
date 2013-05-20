@@ -9,7 +9,6 @@ Package.on_use(function (api) {
 
     api.add_files('actions.js', ['client', 'server']);
     api.add_files('methods.js', ['client', 'server']);
-
-    api.add_files('events.js', 'client');
+    
     api.add_files('helpers.js', 'client');
 });
