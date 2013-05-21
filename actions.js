@@ -1,5 +1,7 @@
 // public actions interface
-Actions = {};
+Actions = {
+  _events : {},
+};
 
 // helper object
 var ActionHelper = function () {};
@@ -56,6 +58,8 @@ var parseOptions = function (args) {
 
 Actions._transform = function (data) {
   var action = Actions._getAction(data._id);
+  _.defaults(data, action.helpers);
+  //console.log(action.helpers);
   return _.extend(data, {
     perform : function () {
       var self = this, args = _.toArray(arguments), result;

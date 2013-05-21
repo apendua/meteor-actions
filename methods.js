@@ -59,7 +59,7 @@ _.extend(Actions, {
     if (Meteor.isClient) {
 
       handle.events = function (eventMap) {
-        var events = action.events || (action.events = {});
+        var events = Actions._events[id] || (Actions._events[id] = {});
         _.each(eventMap, function (callback, spec) {
           events[spec] = (events[spec] || []);
           events[spec].push(function (event) {
@@ -68,9 +68,9 @@ _.extend(Actions, {
         });
       };
 
-      handle.helpers = function (helpers) {
+      handle.helpers = function (options) {
         var helpers = action.helpers || (action.helpers = {});
-        _.each(helpers, function (callback, name) {
+        _.each(options, function (callback, name) {
           helpers[name] = callback;
         });
       };
