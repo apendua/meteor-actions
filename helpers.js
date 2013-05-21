@@ -90,12 +90,30 @@ if (typeof Handlebars !== 'undefined') {
     return '';
   });
 
-  Handlebars.registerHelper('actionLink', function () {
-    return new Handlebars.SafeString(Template.actionLink(this));
+  var defaults = {
+    title: function () {
+      var title = this.title;
+      if (_.isFunction(title))
+        title = title.call(this, arguments);
+      return title || 'undefined';
+    },
+  };
+
+  Template.actionLink.helpers(defaults);
+  Template.actionButton.helpers(defaults);
+
+  Handlebars.registerHelper('actionLink', function (options) {
+    var data = this;
+    if (options.hash && !_.isEmpty(options.hash))
+      data = _.defaults(options.hash, data);
+    return new Handlebars.SafeString(Template.actionLink(data));
   });
   
-  Handlebars.registerHelper('actionButton', function () {
-    return new Handlebars.SafeString(Template.actionButton(this));
+  Handlebars.registerHelper('actionButton', function (options) {
+    var data = this;
+    if (options.hash && !_.isEmpty(options.hash))
+      data = _.defaults(options.hash, data);
+    return new Handlebars.SafeString(Template.actionButton(data));
   });
   
 }
