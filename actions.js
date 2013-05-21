@@ -7,16 +7,12 @@ Actions = {
 var ActionHelper = function () {};
 
 _.extend(ActionHelper.prototype, {
-  each: function () {
-    var args = _.toArray(arguments);
-    var what = args.shift(), self = args.shift();
+  each: function (what, self, args) {
     _.each(this[what], function (callback) {
       callback.apply(self, args);
     });
   },
-  some: function () {
-    var args = _.toArray(arguments);
-    var what = args.shift(), self = args.shift();
+  some: function (what, self, args) {
     return _.some(this[what], function (callback) {
       return callback.apply(self, args);
     });
@@ -58,8 +54,8 @@ var parseOptions = function (args) {
 
 Actions._transform = function (data) {
   var action = Actions._getAction(data._id);
+  //TODO: decide if we should overwrite this properties
   _.defaults(data, action.helpers);
-  //console.log(action.helpers);
   return _.extend(data, {
     perform : function () {
       var self = this, args = _.toArray(arguments), result;
@@ -70,9 +66,9 @@ Actions._transform = function (data) {
       try {
         if (!this.validate.apply(this, args))
           throw new Meteor.Error(403, 'Action not allowed');
-        result = this.callback.apply(this, args);
+        result = action.callback.apply(this, args);
         options.onSuccess && options.onSuccess.call(this, result);
-        action.each('onSuccess', this, err);
+        action.each('onSuccess', this, result);
       } catch (err) {
         if (!options.onError && _.isEmpty(action.onError))
           throw err; // no handlers present, so throw the error again
@@ -83,12 +79,10 @@ Actions._transform = function (data) {
       }
       return result;
     },
-    callback : function () {
-      return action.callback.call(this, arguments);
-    },
     validate : function () {
-      return action.some('allow', this, arguments)
-        && !action.some('deny', this, arguments);
+      var args = _.toArray(arguments); args.unshift(Meteor.userId());
+      return action.some('allow', this, args)
+        && !action.some('deny', this, args);
     },
   });//return
 };//transform
