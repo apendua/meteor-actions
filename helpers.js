@@ -1,126 +1,101 @@
 
 if (typeof Handlebars !== 'undefined') {
 
-  // we will use this one later
-  var blacklist = ['showDenied', ];
+  //TODO: remove this when it is needed
+  Handlebars.registerHelper('actions', function (context, options) {
+    if (options === undefined) { options = context; context = this }
+    console.log('using actions helper is deprecated');
+    return options.fn(context);
+  });
 
-  var getActionSelector = function (node, options) {
-    var options = _.omit(options, blacklist);
-    var dataset = $(node).data(); // or use node.dataset
-    options.action = "";
-    var selector = {};
-    _.each(options, function (value, key) {
-      selector[key] = dataset[key] || value;
+  var createActionLandmark = function (action, options) {
+    var parentData = this;
+    var wrapEventMap = function (oldEventMap) {
+      var newEventMap = {};
+      _.each(oldEventMap, function (handlers, key) {
+        newEventMap[key] = _.map(handlers, function (handler) {
+          return function (event) {
+            // check if event target was disabled
+            if (!$(event.target).prop('disabled'))
+              return handler.call(parentData, event, action);
+          };
+        });
+      });
+      return newEventMap;
+    };
+
+    var proxyAction = {};
+    _.each(action, function (helepr, key) {
+      if (_.isFunction(helepr) && key !== 'validate' && key !== 'perform')
+        proxyAction[key] = function () {
+          return helepr.call(parentData, action);
+        }
+      else proxyAction[key] = helepr;
     });
-    return selector;
+
+    return Spark.createLandmark({
+      rendered: function () {
+        //TODO: implement hide
+        var nodes = this.findAll('[data-disabled="true"]');
+        $(nodes).addClass('disabled').prop('disabled', true)
+          .filter('a').parent().filter('li').addClass('disabled');
+      },
+    }, function () { // landmark
+      var html = Spark.isolate(_.bind(options.fn, null, proxyAction));
+      return Spark.attachEvents(wrapEventMap(Actions._events[action._id]), html);
+    });
   };
 
-  Handlebars.registerHelper('actions', function (context, options) {
-    if (options === undefined) { options = context; context = this; }
-    var handle = null;
-    var label = 'actions=' + EJSON.stringify(options.hash);
-    var html = Spark.labelBranch(label, function () {
-      var html = Spark.createLandmark({
-        rendered: function () {
-          var self = this, nodes = null;
-          nodes = self.findAll('[data-action]');
-          if (nodes) {
-            if (handle) handle.stop();
-            handle = Deps.autorun(function () {
-              if (!self.hasDom()) { //TODO: is this even possible (?)
-                handle.stop();
-              } else {
-                _.each(nodes, function (node) {
-                  var action = Meteor.actions.findOne(getActionSelector(node, options.hash));
-                  if (action && action.validate(Meteor.userId(), Spark.getDataContext(node), context)) {
-                    $(node).removeClass('disabled').prop('disabled', false)
-                      .filter('a').parent().filter('li').removeClass('disabled');
-                  } else {
-                    $(node).addClass('disabled').prop('disabled', true)
-                      .filter('a').parent().filter('li').addClass('disabled');
-                  }
-                });//each
-              }//hasDom
-            });//autorun
-          }//!!nodes
-        },
-        destroyed: function () {
-          if (handle)
-            handle.stop();
-        },
-      }, function () { // landmark
-        var html = Spark.isolate(function () {
-          if (options && _.isFunction(options.fn))
-            return options.fn(context);
-          return '';
-        }); // isolate
-        html = Spark.attachEvents({
-          'click [data-action]': function (event) { // event, landmark
-            var action = Meteor.actions.findOne(getActionSelector(
-              $(event.target).closest('[data-action]'), options.hash
-            ));
-            if (action && action.validate(Meteor.userId(), this, context)) {
-              //XXX: the last argument only pretends to be a template ;)
-              action.callback.call(this, event, {data : context});
-              event.preventDefault();
-            }
-          },
-        }, html); // attachEvents
-        return html;
-      }); // createLandmark
-      html = Spark.setDataContext(context, html);
-      return html;
-    }); // labelBranch
-    return html;
-  });
-  /*
-  Handlebars.registerHelper('action', function (context, options) {
-    if (options === undefined) { options = context; context = this; }
-    //---------------------------------------------------------------
-    var action = Meteor.actions.findOne(options.hash);
-    if (!action) // only render the content
-      return options.fn(context);
+  var renderActions = function (actionList, options) {
+    var parentData = this;
 
-    var handle = null;
-    var label = 'action=' + EJSON.stringify(options.hash);
-    return Spark.labelBranch(label, function () {
-      var html = Spark.createLandmark({
-        rendered: function () {
-          var self = this, nodes = null;
-          nodes = self.findAll('button');
-          if (nodes) {
-            handle && handle.stop();
-            handle = Deps.autorun(function () {
-              if (!self.hasDom()) { //TODO: is this even possible (?)
-                handle.stop();
-              } else {
-                _.each(nodes, function (node) {
-                  //TODO: implement hide
-                  if (action && !action.disable(Spark.getDataContext(node))) {
-                    $(node).removeClass('disabled').prop('disabled', false)
-                      .filter('a').parent().filter('li').removeClass('disabled');
-                  } else {
-                    $(node).addClass('disabled').prop('disabled', true)
-                      .filter('a').parent().filter('li').addClass('disabled');
-                  }
-                });// each
-              }// hasDom
-            });// autorun
-          }// !!nodes
-        },
-        destroyed: function () {
-          handle && handle.stop();
-        },
-      }, function () { // landmark
-        var html = Spark.isolate(function () {
-          if (options && _.isFunction(options.fn))
-            return options.fn(context);
-          return '';
-        }); // isolate
-        return html;//Spark.attachEvents(Actions._events, html);
-      }); // createLandmark
-      return Spark.setDataContext(context, html);
-    }); // labelBranch
+    if (!(actionList && 'observeChanges' in actionList)) {
+      if (actionList && actionList.length > 0) {
+        return _.map(actionList, function (action) {
+          return Spark.labelBranch(
+            (action && action._id) || Spark.UNIQUE_LABEL, function () {
+              var html = createActionLandmark.call(parentData, action, options);
+              return Spark.setDataContext(action, html);
+            });
+        }).join('');
+      } else
+        return Spark.labelBranch('else', function () {
+          return options.inverse ? options.inverse(parentData) : '';
+        });
+    }
+
+    return Spark.list(
+      actionList,
+      function (action) {
+        return Spark.labelBranch(
+          (action && action._id) || Spark.UNIQUE_LABEL, function () {
+            var html = createActionLandmark.call(parentData, action, options);
+            return Spark.setDataContext(action, html);
+          });
+      },
+      function () {
+        //TODO: inject parent data
+        return options.inverse ? Spark.isolate(options.inverse) : '';
+      }
+    );
+  };
+
+  Handlebars.registerHelper('eachAction', function (actionList, options) {
+    return renderActions(actionList, options);
   });
-  */
+  
+  Handlebars.registerHelper('action', function (action, options) {
+    if (_.isObject(action))
+      return renderActions.call(this, [action, ], options);
+    return '';
+  });
+
+  Handlebars.registerHelper('actionLink', function () {
+    return new Handlebars.SafeString(Template.actionLink(this));
+  });
+  
+  Handlebars.registerHelper('actionButton', function () {
+    return new Handlebars.SafeString(Template.actionButton(this));
+  });
+  
 }
