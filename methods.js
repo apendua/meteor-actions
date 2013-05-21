@@ -53,6 +53,7 @@ _.extend(Actions, {
     _.each(methods, function (what) {
       handle[what] = function (callback) {
         action.add(what, uniqueKey(), callback);
+        return this;
       };
     });
 
@@ -66,6 +67,7 @@ _.extend(Actions, {
             return callback.call(this, event, handle);
           });
         });
+        return this;
       };
 
       handle.helpers = function (options) {
@@ -73,7 +75,17 @@ _.extend(Actions, {
         _.each(options, function (callback, name) {
           helpers[name] = callback;
         });
+        return this;
       };
+
+      handle.addClickEvents = function (options) {
+        this.events({
+          'click a, click button': function (event, action) {
+            action.perform();
+          },
+        });
+        return this;
+      }
     }
 
     return handle;
