@@ -54,6 +54,7 @@ var parseOptions = function (args) {
 
 Actions._transform = function (data) {
   var action = Actions._getAction(data._id);
+  var getUserId = Meteor.userId || function () {};
   //TODO: decide if we should overwrite this properties
   _.defaults(data, action.helpers);
   return _.extend(data, {
@@ -62,7 +63,7 @@ Actions._transform = function (data) {
       var options = parseOptions(args);
       // prepare arguments for validators
       !_.isEmpty(options) && args.pop();
-      args.unshift(Meteor.userId());
+      args.unshift(getUserId());
       try {
         if (!this.validate.apply(this, args))
           throw new Meteor.Error(403, 'Action not allowed');
@@ -80,7 +81,7 @@ Actions._transform = function (data) {
       return result;
     },
     validate : function () {
-      var args = _.toArray(arguments); args.unshift(Meteor.userId());
+      var args = _.toArray(arguments); args.unshift(getUserId());
       return action.some('allow', this, args)
         && !action.some('deny', this, args);
     },

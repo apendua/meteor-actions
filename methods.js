@@ -40,6 +40,9 @@ _.each(methods, function (what) {
 _.extend(Actions, {
 
   register: function (props, callback) {
+
+    // TODO: create UI component for this action (?)
+
     if (!_.isFunction(callback))
       throw new Error('callback must be a function, not ' + typeof(callback));
 
@@ -77,7 +80,7 @@ _.extend(Actions, {
         });
         return this;
       };
-
+      /*
       handle.addClickEvents = function (options) {
         this.events({
           'click a, click button': function (event, action) {
@@ -86,34 +89,10 @@ _.extend(Actions, {
         });
         return this;
       }
+      */
     }
 
     return handle;
-  },
-
-  find: function () {
-    return Meteor.actions.find.apply(Meteor.actions, arguments);
-  },
-
-  findOne: function () {
-    return Meteor.actions.findOne.apply(Meteor.actions, arguments);
-  },
-
-  filter: function (selector) {
-    var proxy = {}, self = this, omit = ['may', 'perform', ];
-    selector = EJSON.clone(selector); // for safety :P
-    _.each(self, function (value, key) {
-      if (omit.indexOf(key) < 0 && _.isFunction(value)) {
-        proxy[key] = function () {
-          var args = _.toArray(arguments);
-          // do not break the original selector
-          args[0] = _.defaults(_.clone(selector), args[0]);
-          return value.apply(self, args); // XXX is self ok?
-        };//proxy
-      } else
-        proxy[key] = value;
-    });//each
-    return proxy;
   },
 
   may: function () {

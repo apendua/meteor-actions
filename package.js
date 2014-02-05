@@ -4,7 +4,7 @@ Package.describe({
 });
 
 Package.on_use(function (api) {
-    api.use(['spark', 'templating', 'handlebars'], 'client');
+    api.use(['spark', 'templating', 'handlebars', 'ui'], 'client');
     api.use(['underscore', 'ejson'], ['client', 'server']);
 
     api.add_files('actions.js', ['client', 'server']);

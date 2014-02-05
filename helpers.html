@@ -1,8 +1,8 @@
 
 <template name="actionLink">
-  <a class="{{class}}" href="#" data-disabled="{{disabled}}">{{title}}</a>
+  <a class="{{class}}" href="#" data-action="{{_id}}" data-disabled="{{disabled}}">{{title}}</a>
 </template>
 
 <template name="actionButton">
-  <button class="btn {{class}}" type="button" title="{{hint}}" data-disabled="{{disabled}}">{{title}}</button>
+  <button class="btn {{class}}" type="button" title="{{hint}}" data-action="{{_id}}" data-disabled="{{disabled}}">{{title}}</button>
 </template>

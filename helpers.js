@@ -1,13 +1,57 @@
 
 if (typeof Handlebars !== 'undefined') {
 
-  //TODO: remove this when it is needed
-  Handlebars.registerHelper('actions', function (context, options) {
-    if (options === undefined) { options = context; context = this }
-    console.log('using actions helper is deprecated');
-    return options.fn(context);
+  var specialKeys = ['__content', '__elseContent'];
+  
+  var defaults = {
+    title: function () {
+      var title = this.title;
+      if (_.isFunction(title))
+        title = title.call(this, arguments);
+      return title || 'undefined';
+    },
+  };
+
+  Template.actionLink.helpers(defaults);
+  Template.actionButton.helpers(defaults);
+
+  // TODO: DRY
+
+  Handlebars.registerHelper('forEachAction', function (actions, options) {
+    if (options === undefined) {
+      options = actions;
+      actions = Meteor.actions.find(_.omit(options.hash, specialKeys));
+    }
+    return UI.Each.extend({ data: actions,
+      __content: options.hash.__content,
+      __elseContent: options.hash.__elseContent,
+    });
   });
 
+  Handlebars.registerHelper('actionsAsButtons', function (actions, options) {
+    if (options === undefined) {
+      options = actions;
+      actions = Meteor.actions.find(_.omit(options.hash, specialKeys));
+    }
+    return UI.Each.extend({ data: actions,
+      __content: Template.actionButton,
+    });
+  });
+
+  UI.Component.listenTo = function (action, callback) {
+    this.events({
+      'click [data-action]': function (event, template) {
+        var self = this,
+            args = _.toArray(arguments);
+        if (this._id === action._id) {
+          callback.apply(self, args);
+        }
+      }
+    });
+  }
+  
+}
+/*
   var createActionLandmark = function (action, options) {
     var parentData = this;
     var wrapEventMap = function (oldEventMap) {
@@ -79,41 +123,4 @@ if (typeof Handlebars !== 'undefined') {
       }
     );
   };
-
-  Handlebars.registerHelper('eachAction', function (actionList, options) {
-    return renderActions(actionList, options);
-  });
-  
-  Handlebars.registerHelper('action', function (action, options) {
-    if (_.isObject(action))
-      return renderActions.call(this, [action, ], options);
-    return '';
-  });
-
-  var defaults = {
-    title: function () {
-      var title = this.title;
-      if (_.isFunction(title))
-        title = title.call(this, arguments);
-      return title || 'undefined';
-    },
-  };
-
-  Template.actionLink.helpers(defaults);
-  Template.actionButton.helpers(defaults);
-
-  Handlebars.registerHelper('actionLink', function (options) {
-    var data = this;
-    if (options.hash && !_.isEmpty(options.hash))
-      data = _.defaults(options.hash, data);
-    return new Handlebars.SafeString(Template.actionLink(data));
-  });
-  
-  Handlebars.registerHelper('actionButton', function (options) {
-    var data = this;
-    if (options.hash && !_.isEmpty(options.hash))
-      data = _.defaults(options.hash, data);
-    return new Handlebars.SafeString(Template.actionButton(data));
-  });
-  
-}
+*/
