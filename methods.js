@@ -1,5 +1,6 @@
 
 var methods = [ 'allow', 'deny', 'onSuccess', 'onError', ];
+var components = {};
 
 var toSelector = function (selector) {
   if (_.isString(selector))
@@ -52,6 +53,8 @@ _.extend(Actions, {
     var action = Actions._getAction(id);
     action.callback = callback;
 
+    var component = null;
+
     var handle = Actions._transform({_id:id});
     _.each(methods, function (what) {
       handle[what] = function (callback) {
@@ -62,24 +65,11 @@ _.extend(Actions, {
 
     if (Meteor.isClient) {
 
-      handle.events = function (eventMap) {
-        var events = Actions._events[id] || (Actions._events[id] = {});
-        _.each(eventMap, function (callback, spec) {
-          events[spec] = (events[spec] || []);
-          events[spec].push(function (event) {
-            return callback.call(this, event, handle);
-          });
-        });
-        return this;
-      };
+      component = components[id] = Template.__action__.extend({});
 
-      handle.helpers = function (options) {
-        var helpers = action.helpers || (action.helpers = {});
-        _.each(options, function (callback, name) {
-          helpers[name] = callback;
-        });
-        return this;
-      };
+      handle.events  = _.bind(UI.Component.events,  component);
+      handle.helpers = _.bind(UI.Component.helpers, component);
+      
       /*
       handle.addClickEvents = function (options) {
         this.events({
@@ -95,6 +85,10 @@ _.extend(Actions, {
     return handle;
   },
 
+  getUI: function (id) {
+    return components[id] || Template.__action__;
+  },
+
   may: function () {
     var args = _.toArray(arguments), action = null;
     var userId = args.shift();
@@ -102,6 +96,8 @@ _.extend(Actions, {
     action = this.findOne(toSelector(selector), {reactive:false});
     return !!action && action.validate.apply(action, args);
   },
+
+  // this seems useless
 
   perform: function () {
     var args = _.toArray(arguments);

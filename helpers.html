@@ -1,8 +1,20 @@
 
-<template name="actionLink">
+<template name="__action__">
+  {{> __content}}
+</template>
+
+<template name="actionAsLink">
   <a class="{{class}}" href="#" data-action="{{_id}}" data-disabled="{{disabled}}">{{title}}</a>
 </template>
 
-<template name="actionButton">
-  <button class="btn {{class}}" type="button" title="{{hint}}" data-action="{{_id}}" data-disabled="{{disabled}}">{{title}}</button>
+<template name="actionAsListItem">
+  <li class="{{active}}">
+    <a class="{{class}}" href="#" data-action="{{_id}}" data-disabled="{{disabled}}">{{title}}</a>
+  </li>
+</template>
+
+<template name="actionAsButton">
+  <button class="btn {{class}}" type="button" title="{{hint}}" data-action="{{_id}}" data-disabled="{{disabled}}">
+    {{title}}
+  </button>
 </template>
