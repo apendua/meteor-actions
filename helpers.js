@@ -70,13 +70,6 @@ if (typeof Handlebars !== 'undefined') {
     });
   });
 
-  Template.__action__.helpers({
-    disabled: function (context) {
-      console.log(context);
-      return this.disabled || this.validate();
-    },
-  });
-
   UI.Component.listenTo = function (action, callback) {
     this.events({
       'click [data-action]': function (event, template) {

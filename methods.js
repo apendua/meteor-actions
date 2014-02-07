@@ -69,7 +69,7 @@ _.extend(Actions, {
 
       handle.events  = _.bind(UI.Component.events,  component);
       handle.helpers = _.bind(UI.Component.helpers, component);
-      
+
       /*
       handle.addClickEvents = function (options) {
         this.events({
